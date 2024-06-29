@@ -1062,12 +1062,13 @@ public class AuthenticationManager {
         }
         logger.info("****************AuthenticationManager-1063-END_AFTER_REQUIRED_ACTIONS= " + authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS));
         logger.info("********AuthenticationManager-1064-UPDATE_PASSWORD_EXECUTION = " + authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION));
-        if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null || authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION) != null) {
+		if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null
+				|| authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION) != null) {
             LoginFormsProvider infoPage = session.getProvider(LoginFormsProvider.class).setAuthenticationSession(authSession)
                     .setSuccess(Messages.ACCOUNT_UPDATED);
-            logger.info("********AuthenticationManager-1068********");
+            logger.info("********AuthenticationManager-1069********");
             if (authSession.getAuthNote(SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS) != null) {
-            	logger.info("********AuthenticationManager-1070-SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS********");
+            	logger.info("********AuthenticationManager-1071-SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS********");
                 if (authSession.getRedirectUri() != null) {
                 	logger.info("********AuthenticationManager-1073-PAGE_REDIRECT_URI =" + authSession.getRedirectUri());
                     infoPage.setAttribute("pageRedirectUri", authSession.getRedirectUri());
@@ -1081,8 +1082,10 @@ public class AuthenticationManager {
                     .setDetachedAuthSession()
                     .createInfoPage();
 
-			authSession.removeAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION);
-			logger.info("********AuthenticationManager-1086-UPDATE_PASSWORD_EXECUTION = "
+			if (authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION) != null) {
+				authSession.removeAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION);
+			}
+			logger.info("********AuthenticationManager-1088-UPDATE_PASSWORD_EXECUTION = "
 					+ authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION));
             new AuthenticationSessionManager(session).removeAuthenticationSession(authSession.getRealm(), authSession, true);
 
