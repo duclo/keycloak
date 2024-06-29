@@ -105,7 +105,9 @@ import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriBuilderException;
 import jakarta.ws.rs.core.UriInfo;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.List;
 
 import static org.keycloak.authentication.actiontoken.DefaultActionToken.ACTION_TOKEN_BASIC_CHECKS;
 import static org.keycloak.models.utils.DefaultRequiredActions.getDefaultRequiredActionCaseInsensitively;
@@ -117,6 +119,7 @@ public class LoginActionsService {
 
     private static final Logger logger = Logger.getLogger(LoginActionsService.class);
 
+    public static final String UPDATE_PASSWORD_EXECUTION = "UPDATE_PASSWORD_EXECUTION";
     public static final String AUTHENTICATE_PATH = "authenticate";
     public static final String REGISTRATION_PATH = "registration";
     public static final String RESET_CREDENTIALS_PATH = "reset-credentials";
@@ -522,6 +525,7 @@ public class LoginActionsService {
                                        @QueryParam(Constants.EXECUTION) String execution,
                                        @QueryParam(Constants.CLIENT_ID) String clientId,
                                        @QueryParam(Constants.TAB_ID) String tabId) {
+    	logger.info("********ACTION_TOKEN***********");
         return handleActionToken(key, execution, clientId, tabId);
     }
 
@@ -1038,6 +1042,7 @@ public class LoginActionsService {
                                        @QueryParam(Constants.EXECUTION) String action,
                                        @QueryParam(Constants.CLIENT_ID) String clientId,
                                        @QueryParam(Constants.TAB_ID) String tabId) {
+    	logger.info("********REQUIREDACTIONPOST***********");
         return processRequireAction(authSessionId, code, action, clientId, tabId);
     }
 
@@ -1048,6 +1053,7 @@ public class LoginActionsService {
                                       @QueryParam(Constants.EXECUTION) String action,
                                       @QueryParam(Constants.CLIENT_ID) String clientId,
                                       @QueryParam(Constants.TAB_ID) String tabId) {
+    	logger.info("********REQUIREDACTIONGET***********");
         return processRequireAction(authSessionId, code, action, clientId, tabId);
     }
 
@@ -1056,6 +1062,7 @@ public class LoginActionsService {
 
         SessionCodeChecks checks = checksForCode(authSessionId, code, action, clientId, tabId, REQUIRED_ACTION);
         if (!checks.verifyRequiredAction(action)) {
+        	logger.info("***************LoginActionsService-1065*****************");
             return checks.getResponse();
         }
 
@@ -1064,6 +1071,7 @@ public class LoginActionsService {
         processLocaleParam(authSession);
 
         if (!checks.isActionRequest()) {
+        	logger.info("***************LoginActionsService-1074*****************");
             initLoginEvent(authSession);
             event.event(EventType.CUSTOM_REQUIRED_ACTION);
             return AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection, request, session.getContext().getUri(), event);
@@ -1075,6 +1083,7 @@ public class LoginActionsService {
 
         RequiredActionFactory factory = (RequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, getDefaultRequiredActionCaseInsensitively(action));
         if (factory == null) {
+        	logger.info("***************LoginActionsService-1086*****************");
             ServicesLogger.LOGGER.actionProviderNull();
             event.error(Errors.INVALID_CODE);
             throw new WebApplicationException(ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.INVALID_CODE));
@@ -1087,6 +1096,7 @@ public class LoginActionsService {
         };
         RequiredActionProvider provider = null;
         try {
+        	logger.info("***************LoginActionsService-1099*****************");
             provider = AuthenticationManager.createRequiredAction(context);
         }  catch (AuthenticationFlowException e) {
             if (e.getResponse() != null) {
@@ -1096,9 +1106,10 @@ public class LoginActionsService {
         }
 
 
-        Response response;
+        Response response = null;
         
         if (isCancelAppInitiatedAction(factory.getId(), authSession, context)) {
+        	logger.info("***************LoginActionsService-1112*****************");
             provider.initiatedActionCanceled(session, authSession);
             AuthenticationManager.setKcActionStatus(factory.getId(), RequiredActionContext.KcActionStatus.CANCELLED, authSession);
             context.success();
@@ -1107,10 +1118,12 @@ public class LoginActionsService {
         }
 
         if (action != null) {
+        	logger.info("***************LoginActionsService-1121*****************");
             authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
         }
 
         if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
+        	logger.info("***************LoginActionsService-1126*****************");
             event.clone().success();
             initLoginEvent(authSession);
             event.event(EventType.LOGIN);
@@ -1119,7 +1132,7 @@ public class LoginActionsService {
             authSession.removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
             AuthenticationManager.setKcActionStatus(factory.getId(), RequiredActionContext.KcActionStatus.SUCCESS, authSession);
 
-            response = AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection, request, session.getContext().getUri(), event);
+            //response = AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection, request, session.getContext().getUri(), event);
         } else if (context.getStatus() == RequiredActionContext.Status.CHALLENGE) {
             response = context.getChallenge();
         } else if (context.getStatus() == RequiredActionContext.Status.FAILURE) {
@@ -1128,6 +1141,57 @@ public class LoginActionsService {
             throw new RuntimeException("Unreachable");
         }
 
+		if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
+			logger.info("***************LoginActionsService-1147*****************");
+			if (context.getHttpRequest() != null && context.getHttpRequest().getUri() != null) {
+				List<String> executions = context.getHttpRequest().getUri().getQueryParameters()
+						.get(Constants.EXECUTION);
+				if (!executions.isEmpty() && executions.size() == 1
+						&& executions.get(0).equals(UserModel.RequiredAction.UPDATE_PASSWORD.toString())) {
+					logger.info("***************LoginActionsService-1152-Received Request to" + executions.get(0));
+					logger.info("***************LoginActionsService-1153-CLIENT_ID=" + clientId);
+					String redirectLocation = null;
+					if ("vms-app".equals(clientId)) {
+						if (context.getHttpRequest().getUri().getPath().contains("https://auth.duclo.net")) {
+							redirectLocation = "https://dev.oncloud.hanwhavision.cloud";
+						} else if (context.getHttpRequest().getUri().getPath()
+								.contains("https://auth.qa.platform.hanwhavision.cloud")) {
+							redirectLocation = "https://qa.oncloud.hanwhavision.cloud";
+						} else if (context.getHttpRequest().getUri().getPath()
+								.contains("https://auth.platform.hanwhavision.cloud")) {
+							redirectLocation = "https://oncloud.hanwhavision.cloud";
+						}
+					} else if ("portal-app".equals(clientId)) {
+						if (context.getHttpRequest().getUri().getPath().contains("https://auth.duclo.net")) {
+							redirectLocation = "https://dev.platform.hanwhavision.cloud";
+						} else if (context.getHttpRequest().getUri().getPath()
+								.contains("https://auth.qa.platform.hanwhavision.cloud")) {
+							redirectLocation = "https://qa.platform.hanwhavision.cloud";
+						} else if (context.getHttpRequest().getUri().getPath()
+								.contains("https://auth.platform.hanwhavision.cloud")) {
+							redirectLocation = "https://platform.hanwhavision.cloud";
+						}
+					}
+
+					if (redirectLocation != null) {
+						try {
+							URI uriLocation = new URI(redirectLocation);
+							authSession.setAuthNote(UPDATE_PASSWORD_EXECUTION, "true");
+							AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection,
+									request, session.getContext().getUri(), event);
+							logger.info("***************LoginActionsService-1180*************");
+							return Response.status(302).location(uriLocation).build();
+						} catch (URISyntaxException exc) {
+							logger.error("Failed to create URI instance :" + exc);
+						}
+					}
+				}
+			}
+		}
+		if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
+			response = AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection,
+					request, session.getContext().getUri(), event);
+		}
         return BrowserHistoryHelper.getInstance().saveResponseAndRedirect(session, authSession, response, true, request);
     }
     

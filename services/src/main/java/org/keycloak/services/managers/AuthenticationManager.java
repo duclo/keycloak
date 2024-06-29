@@ -1015,6 +1015,7 @@ public class AuthenticationManager {
                                                   ClientConnection clientConnection,
                                                   HttpRequest request, UriInfo uriInfo, EventBuilder event) {
         Response requiredAction = actionRequired(session, authSession, request, event);
+        logger.info("****************AuthenticationManager-1018-RequiredAction= " + requiredAction);
         if (requiredAction != null) return requiredAction;
         return finishedRequiredActions(session, authSession, null, clientConnection, request, uriInfo, event);
 
@@ -1059,26 +1060,35 @@ public class AuthenticationManager {
                 singleUseObjectProvider.put(actionTokenKeyToInvalidate, actionTokenKey.getExpiration() - Time.currentTime(), null); // Token is invalidated
             }
         }
-
-        if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null) {
+        logger.info("****************AuthenticationManager-1063-END_AFTER_REQUIRED_ACTIONS= " + authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS));
+        logger.info("********AuthenticationManager-1064-UPDATE_PASSWORD_EXECUTION = " + authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION));
+        if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null || authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION) != null) {
             LoginFormsProvider infoPage = session.getProvider(LoginFormsProvider.class).setAuthenticationSession(authSession)
                     .setSuccess(Messages.ACCOUNT_UPDATED);
+            logger.info("********AuthenticationManager-1068********");
             if (authSession.getAuthNote(SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS) != null) {
+            	logger.info("********AuthenticationManager-1070-SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS********");
                 if (authSession.getRedirectUri() != null) {
+                	logger.info("********AuthenticationManager-1073-PAGE_REDIRECT_URI =" + authSession.getRedirectUri());
                     infoPage.setAttribute("pageRedirectUri", authSession.getRedirectUri());
                 }
 
             } else {
+            	logger.info("********AuthenticationManager-1078-SKIP_LINK********");
                 infoPage.setAttribute(Constants.SKIP_LINK, true);
             }
             Response response = infoPage
                     .setDetachedAuthSession()
                     .createInfoPage();
 
+			authSession.removeAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION);
+			logger.info("********AuthenticationManager-1086-UPDATE_PASSWORD_EXECUTION = "
+					+ authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION));
             new AuthenticationSessionManager(session).removeAuthenticationSession(authSession.getRealm(), authSession, true);
 
             return response;
         }
+        logger.info("********AuthenticationManager-1091********");
         RealmModel realm = authSession.getRealm();
 
         ClientSessionContext clientSessionCtx = AuthenticationProcessor.attachSession(authSession, userSession, session, realm, clientConnection, event);
