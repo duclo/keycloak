@@ -1146,48 +1146,38 @@ public class LoginActionsService {
 				logger.info("***************LoginActionsService-1146*****************");
 				List<String> executions = context.getHttpRequest().getUri().getQueryParameters()
 						.get(Constants.EXECUTION);
-
 				if (!executions.isEmpty() && executions.size() == 1
 						&& executions.get(0).equals(UserModel.RequiredAction.UPDATE_PASSWORD.toString())) {
-					logger.info("***************LoginActionsService-1152-Received Request to" + executions.get(0));
-					logger.info("***************LoginActionsService-1153-CLIENT_ID=" + clientId);
-					String redirectLocation = null;
-					if ("vms-app".equals(clientId)) {
-						if (context.getHttpRequest().getUri().getPath().contains("https://auth.duclo.net")) {
-							redirectLocation = "https://dev.oncloud.hanwhavision.cloud";
-						} else if (context.getHttpRequest().getUri().getPath()
-								.contains("https://auth.qa.platform.hanwhavision.cloud")) {
-							redirectLocation = "https://qa.oncloud.hanwhavision.cloud";
-						} else if (context.getHttpRequest().getUri().getPath()
-								.contains("https://auth.platform.hanwhavision.cloud")) {
-							redirectLocation = "https://oncloud.hanwhavision.cloud";
-						}
-					} else if ("portal-app".equals(clientId)) {
-						if (context.getHttpRequest().getUri().getPath().contains("https://auth.duclo.net")) {
-							redirectLocation = "https://dev.platform.hanwhavision.cloud";
-						} else if (context.getHttpRequest().getUri().getPath()
-								.contains("https://auth.qa.platform.hanwhavision.cloud")) {
-							redirectLocation = "https://qa.platform.hanwhavision.cloud";
-						} else if (context.getHttpRequest().getUri().getPath()
-								.contains("https://auth.platform.hanwhavision.cloud")) {
-							redirectLocation = "https://platform.hanwhavision.cloud";
-						}
-					}
+					logger.info("***************LoginActionsService-1151-Received Request to" + executions.get(0));
+					logger.info("***************LoginActionsService-1152-CLIENT_ID=" + clientId);
+					logger.info("***************LoginActionsService-1153-URI_PATH="
+							+ context.getHttpRequest().getUri().getPath());
+					logger.info("***************LoginActionsService-1154-BASE_URI_PATH="
+							+ context.getHttpRequest().getUri().getBaseUri().toString());
+					logger.info("***************LoginActionsService-1155-VMS-APP=" + "vms-app".equals(clientId));
+					if (authSession.getClient() != null) {
+						logger.info("***************LoginActionsService-1157***************** CLIENT_CLIENT_ID = "
+								+ authSession.getClient().getClientId());
+						logger.info("***************LoginActionsService-1158***************** CLIENT_BASE_URL = "
+								+ authSession.getClient().getBaseUrl());
+						logger.info("***************LoginActionsService-1159***************** CLIENT_ROOT_URL = "
+								+ authSession.getClient().getRootUrl());
 
-					if (redirectLocation != null) {
-						URI uriLocation = new URI(redirectLocation);
-						authSession.setAuthNote(UPDATE_PASSWORD_EXECUTION, "true");
-						AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection,
-								request, session.getContext().getUri(), event);
-						logger.info("***************LoginActionsService-1182*************");
-						return Response.status(302).location(uriLocation).build();
+						if (authSession.getClient().getRootUrl() != null) {
+							URI uriLocation = new URI(authSession.getClient().getRootUrl());
+							authSession.setAuthNote(UPDATE_PASSWORD_EXECUTION, "true");
+							AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection,
+									request, session.getContext().getUri(), event);
+							logger.info("***************LoginActionsService-1166*************");
+							return Response.status(302).location(uriLocation).build();
+						}
 					}
 				}
 			} catch (Exception exc) {
 				if (authSession.getAuthNote(UPDATE_PASSWORD_EXECUTION) != null) {
 					authSession.removeAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION);
 				}
-				logger.error("Failed to execute custom flow :" + exc);
+				logger.error("******************************Failed to execute custom flow :" + exc);
 			}
 		}
 		if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {

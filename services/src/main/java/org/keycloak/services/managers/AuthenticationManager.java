@@ -1091,7 +1091,7 @@ public class AuthenticationManager {
 
             return response;
         }
-        logger.info("********AuthenticationManager-1091********");
+        logger.info("********AuthenticationManager-1094********");
         RealmModel realm = authSession.getRealm();
 
         ClientSessionContext clientSessionCtx = AuthenticationProcessor.attachSession(authSession, userSession, session, realm, clientConnection, event);
