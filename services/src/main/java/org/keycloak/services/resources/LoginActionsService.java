@@ -1152,15 +1152,15 @@ public class LoginActionsService {
 					logger.info("***************LoginActionsService-1152-CLIENT_ID=" + clientId);
 					logger.info("***************LoginActionsService-1153-URI_PATH="
 							+ context.getHttpRequest().getUri().getPath());
-					logger.info("***************LoginActionsService-1154-BASE_URI_PATH="
+					logger.info("***************LoginActionsService-1155-BASE_URI_PATH="
 							+ context.getHttpRequest().getUri().getBaseUri().toString());
-					logger.info("***************LoginActionsService-1155-VMS-APP=" + "vms-app".equals(clientId));
+
 					if (authSession.getClient() != null) {
-						logger.info("***************LoginActionsService-1157***************** CLIENT_CLIENT_ID = "
+						logger.info("***************LoginActionsService-1159***************** CLIENT_CLIENT_ID = "
 								+ authSession.getClient().getClientId());
-						logger.info("***************LoginActionsService-1158***************** CLIENT_BASE_URL = "
+						logger.info("***************LoginActionsService-1161***************** CLIENT_BASE_URL = "
 								+ authSession.getClient().getBaseUrl());
-						logger.info("***************LoginActionsService-1159***************** CLIENT_ROOT_URL = "
+						logger.info("***************LoginActionsService-1163***************** CLIENT_ROOT_URL = "
 								+ authSession.getClient().getRootUrl());
 
 						if (authSession.getClient().getRootUrl() != null) {
@@ -1168,7 +1168,7 @@ public class LoginActionsService {
 							authSession.setAuthNote(UPDATE_PASSWORD_EXECUTION, "true");
 							AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection,
 									request, session.getContext().getUri(), event);
-							logger.info("***************LoginActionsService-1166*************");
+							logger.info("***************LoginActionsService-1171*************");
 							return Response.status(302).location(uriLocation).build();
 						}
 					}
