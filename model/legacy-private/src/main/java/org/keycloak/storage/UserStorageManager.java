@@ -104,7 +104,9 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
     protected UserModel importValidation(RealmModel realm, UserModel user) {
         if (user == null || user.getFederationLink() == null) return user;
 
+        logger.info("******************UserStorageManager-107-importValidation-user="+user);
         UserStorageProviderModel model = getStorageProviderModel(realm, user.getFederationLink());
+        logger.info("******************UserStorageManager-109-importValidation-UserStorageProviderModel="+model);
         if (model == null) {
             // remove linked user with unknown storage provider.
             logger.debugf("Removed user with federation link of unknown storage provider '%s'", user.getUsername());
@@ -120,15 +122,19 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
                 }
             };
         }
-
+        logger.info("******************UserStorageManager-125-importValidation-user="+user);
         ImportedUserValidation importedUserValidation = getStorageProviderInstance(model, ImportedUserValidation.class, true);
+        logger.info("******************UserStorageManager-127-importValidation-importedUserValidation="+importedUserValidation);
         if (importedUserValidation == null) return user;
 
+        logger.info("******************UserStorageManager-130-BEFORECALLINGVALIDATE");
         UserModel validated = importedUserValidation.validate(realm, user);
         if (validated == null) {
+        	logger.info("******************UserStorageManager-133-AFTERCALLINGVALIDATE"+validated);
             deleteInvalidUser(realm, user);
             return null;
         } else {
+        	logger.info("******************UserStorageManager-137-validated_email="+validated.getEmail());
             return validated;
         }
     }
@@ -360,28 +366,48 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
 
     @Override
     public UserModel getUserByUsername(RealmModel realm, String username) {
+    	logger.info("******************UserStorageManager-369-getUserByUsername-username="+username);
         UserModel user = localStorage().getUserByUsername(realm, username);
+        logger.info("******************UserStorageManager-371-getUserByUsername-user="+user);
         if (user != null) {
             return importValidation(realm, user);
+        } else{
+        	return user;
         }
 
-        return mapEnabledStorageProvidersWithTimeout(realm, UserLookupProvider.class,
-                provider -> provider.getUserByUsername(realm, username)).findFirst().orElse(null);
+        // commented code to stop searching of user in ldap
+		/*
+		 * return mapEnabledStorageProvidersWithTimeout(realm, UserLookupProvider.class,
+		 * provider -> provider.getUserByUsername(realm,
+		 * username)).findFirst().orElse(null);
+		 */
     }
 
     @Override
     public UserModel getUserByEmail(RealmModel realm, String email) {
+    	logger.info("******************UserStorageManager-382-getUserByEmail-email="+email);
         UserModel user = localStorage().getUserByEmail(realm, email);
+        logger.info("******************UserStorageManager-384-getUserByEmail-user="+user);
         if (user != null) {
+        	logger.info("******************UserStorageManager-386-getUserByEmail-user="+user);
             user = importValidation(realm, user);
             // Case when email was changed directly in the userStorage and doesn't correspond anymore to the email from local DB
             if (email.equalsIgnoreCase(user.getEmail())) {
+            	logger.info("******************UserStorageManager-390-getUserByEmail-user="+user);
                 return user;
             }
+        } else {
+        	return user;
         }
 
+        logger.info("******************UserStorageManager-397-getUserByEmail-user="+user);
         return mapEnabledStorageProvidersWithTimeout(realm, UserLookupProvider.class,
-                provider -> provider.getUserByEmail(realm, email)).findFirst().orElse(null);
+                provider -> {
+                	logger.info("*********UserStorageManager-400-getUserByEmail-user="+provider);
+                	UserModel userModel= provider.getUserByEmail(realm, email);
+                	logger.info("*********UserStorageManager-402-getUserByEmail-user="+userModel);
+                	return userModel;
+                	}).findFirst().orElse(null);
     }
 
     /** {@link UserLookupProvider} methods implementations end here
