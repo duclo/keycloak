@@ -57,7 +57,7 @@ public class UserStorageSyncManager {
      */
     public static void bootstrapPeriodic(final KeycloakSessionFactory sessionFactory, final TimerProvider timer) {
     	logger.info("******UserStorageSyncManager-bootstrapPeriodic()-59-ENABLED_AUTO_SYNC_JOB="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
-    	if(System.getenv("ENABLED_AUTO_SYNC_JOB") != null  && "true".equals(System.getenv("ENABLED_AUTO_SYNC_JOB"))) {
+    	if(Boolean.TRUE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
     		KeycloakModelUtils.runJobInTransaction(sessionFactory, new KeycloakSessionTask() {
 
                 @Override
