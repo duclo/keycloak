@@ -56,25 +56,28 @@ public class UserStorageSyncManager {
      * @param timer
      */
     public static void bootstrapPeriodic(final KeycloakSessionFactory sessionFactory, final TimerProvider timer) {
-        KeycloakModelUtils.runJobInTransaction(sessionFactory, new KeycloakSessionTask() {
+    	logger.info("******UserStorageSyncManager-bootstrapPeriodic()-59-ENABLED_AUTO_SYNC_JOB="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
+    	if(Boolean.TRUE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+    		KeycloakModelUtils.runJobInTransaction(sessionFactory, new KeycloakSessionTask() {
 
-            @Override
-            public void run(KeycloakSession session) {
-                Stream<RealmModel> realms = session.realms().getRealmsWithProviderTypeStream(UserStorageProvider.class);
-                realms.forEach(realm -> {
-                    Stream<UserStorageProviderModel> providers = ((LegacyRealmModel) realm).getUserStorageProvidersStream();
-                    providers.forEachOrdered(provider -> {
-                        UserStorageProviderFactory factory = (UserStorageProviderFactory) session.getKeycloakSessionFactory().getProviderFactory(UserStorageProvider.class, provider.getProviderId());
-                        if (factory instanceof ImportSynchronization && provider.isImportEnabled()) {
-                            refreshPeriodicSyncForProvider(sessionFactory, timer, provider, realm.getId());
-                        }
+                @Override
+                public void run(KeycloakSession session) {
+                    Stream<RealmModel> realms = session.realms().getRealmsWithProviderTypeStream(UserStorageProvider.class);
+                    realms.forEach(realm -> {
+                        Stream<UserStorageProviderModel> providers = ((LegacyRealmModel) realm).getUserStorageProvidersStream();
+                        providers.forEachOrdered(provider -> {
+                            UserStorageProviderFactory factory = (UserStorageProviderFactory) session.getKeycloakSessionFactory().getProviderFactory(UserStorageProvider.class, provider.getProviderId());
+                            if (factory instanceof ImportSynchronization && provider.isImportEnabled()) {
+                                refreshPeriodicSyncForProvider(sessionFactory, timer, provider, realm.getId());
+                            }
+                        });
                     });
-                });
 
-                ClusterProvider clusterProvider = session.getProvider(ClusterProvider.class);
-                clusterProvider.registerListener(USER_STORAGE_TASK_KEY, new UserStorageClusterListener(sessionFactory));
-            }
-        });
+                    ClusterProvider clusterProvider = session.getProvider(ClusterProvider.class);
+                    clusterProvider.registerListener(USER_STORAGE_TASK_KEY, new UserStorageClusterListener(sessionFactory));
+                }
+            });
+    	}
     }
 
     private static class Holder {
