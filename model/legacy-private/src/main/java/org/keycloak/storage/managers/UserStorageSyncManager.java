@@ -58,6 +58,7 @@ public class UserStorageSyncManager {
     public static void bootstrapPeriodic(final KeycloakSessionFactory sessionFactory, final TimerProvider timer) {
     	logger.info("******UserStorageSyncManager-bootstrapPeriodic()-59-ENABLED_AUTO_SYNC_JOB="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
     	if(Boolean.TRUE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+    		logger.info("******UserStorageSyncManager-bootstrapPeriodic()-61-ENABLED_AUTO_SYNC_JOB_EXECUTED="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
     		KeycloakModelUtils.runJobInTransaction(sessionFactory, new KeycloakSessionTask() {
 
                 @Override
@@ -86,10 +87,11 @@ public class UserStorageSyncManager {
 
     public static SynchronizationResult syncAllUsers(final KeycloakSessionFactory sessionFactory, final String realmId, final UserStorageProviderModel provider) {
         UserStorageProviderFactory factory = (UserStorageProviderFactory) sessionFactory.getProviderFactory(UserStorageProvider.class, provider.getProviderId());
-        if (!(factory instanceof ImportSynchronization) || !provider.isImportEnabled() || !provider.isEnabled()) {
-            return SynchronizationResult.ignored();
-
+        if (!(factory instanceof ImportSynchronization) || !provider.isImportEnabled() || !provider.isEnabled() || Boolean.FALSE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+        	logger.info("******UserStorageSyncManager-syncAllUsers()-91-skip-ENABLED_AUTO_SYNC_JOB="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
+        	return SynchronizationResult.ignored();
         }
+        logger.info("******UserStorageSyncManager-syncAllUsers()-94-executed-ENABLED_AUTO_SYNC_JOB="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
 
         final Holder holder = new Holder();
 
@@ -131,10 +133,11 @@ public class UserStorageSyncManager {
 
     public static SynchronizationResult syncChangedUsers(final KeycloakSessionFactory sessionFactory, final String realmId, final UserStorageProviderModel provider) {
         UserStorageProviderFactory factory = (UserStorageProviderFactory) sessionFactory.getProviderFactory(UserStorageProvider.class, provider.getProviderId());
-        if (!(factory instanceof ImportSynchronization) || !provider.isImportEnabled() || !provider.isEnabled()) {
-            return SynchronizationResult.ignored();
-
+        if (!(factory instanceof ImportSynchronization) || !provider.isImportEnabled() || !provider.isEnabled() || Boolean.FALSE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+        	logger.info("******UserStorageSyncManager-syncChangedUsers()-137-skip-ENABLED_AUTO_SYNC_JOB="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
+        	return SynchronizationResult.ignored();
         }
+        logger.info("******UserStorageSyncManager-syncChangedUsers()-140-executed-ENABLED_AUTO_SYNC_JOB="+System.getenv("ENABLED_AUTO_SYNC_JOB"));
         final Holder holder = new Holder();
 
         // Ensure not executed concurrently on this or any other cluster node
