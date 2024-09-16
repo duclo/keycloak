@@ -469,7 +469,11 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
 
     @Override
     public SynchronizationResult sync(KeycloakSessionFactory sessionFactory, String realmId, UserStorageProviderModel model) {
-        syncMappers(sessionFactory, realmId, model);
+    	if(Boolean.FALSE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+    		logger.info("LDAPStorageProviderFactory-473-sync-ignored ENABLED_AUTO_SYNC_JOB= " + System.getenv("ENABLED_AUTO_SYNC_JOB"));
+    		return SynchronizationResult.ignored();
+    	}
+    	syncMappers(sessionFactory, realmId, model);
 
         logger.infof("Sync all users from LDAP to local store: realm: %s, federation provider: %s", realmId, model.getName());
 
@@ -485,7 +489,11 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
 
     @Override
     public SynchronizationResult syncSince(Date lastSync, KeycloakSessionFactory sessionFactory, String realmId, UserStorageProviderModel model) {
-        syncMappers(sessionFactory, realmId, model);
+    	if(Boolean.FALSE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+    		logger.info("LDAPStorageProviderFactory-493-syncSince-ignored ENABLED_AUTO_SYNC_JOB= " + System.getenv("ENABLED_AUTO_SYNC_JOB"));
+    		return SynchronizationResult.ignored();
+    	}
+    	syncMappers(sessionFactory, realmId, model);
 
         logger.infof("Sync changed users from LDAP to local store: realm: %s, federation provider: %s, last sync time: " + lastSync, realmId, model.getName());
 
@@ -538,6 +546,7 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
             boolean nextPage = true;
             while (nextPage) {
                 userQuery.setLimit(pageSize);
+                logger.info("LDAPStorageProviderFactory-549-userQuery = " + userQuery.toString());
                 final List<LDAPObject> users = userQuery.getResultList();
                 nextPage = userQuery.getPaginationContext().hasNextPage();
                 SynchronizationResult currentPageSync = importLdapUsers(sessionFactory, realmId, fedModel, users);
@@ -545,6 +554,7 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
             }
         } else {
             // LDAP pagination not available. Do everything in single transaction
+        	logger.info("LDAPStorageProviderFactory-557-userQuery = " + userQuery.toString());
             final List<LDAPObject> users = userQuery.getResultList();
             SynchronizationResult currentSync = importLdapUsers(sessionFactory, realmId, fedModel, users);
             syncResult.add(currentSync);
@@ -590,7 +600,7 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
         final BooleanHolder exists = new BooleanHolder();
 
         for (final LDAPObject ldapUser : ldapUsers) {
-
+        	logger.info("LDAPStorageProviderFactory-603-ldapUser = " + ldapUser.getUuid());
             try {
 
                 // Process each user in it's own transaction to avoid global fail
