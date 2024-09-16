@@ -469,7 +469,7 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
 
     @Override
     public SynchronizationResult sync(KeycloakSessionFactory sessionFactory, String realmId, UserStorageProviderModel model) {
-    	if(Boolean.FALSE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+    	if(false == (Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
     		logger.info("LDAPStorageProviderFactory-473-sync-ignored ENABLED_AUTO_SYNC_JOB= " + System.getenv("ENABLED_AUTO_SYNC_JOB"));
     		return SynchronizationResult.ignored();
     	}
@@ -489,7 +489,7 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
 
     @Override
     public SynchronizationResult syncSince(Date lastSync, KeycloakSessionFactory sessionFactory, String realmId, UserStorageProviderModel model) {
-    	if(Boolean.FALSE.equals(Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
+    	if(false == (Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")))) {
     		logger.info("LDAPStorageProviderFactory-493-syncSince-ignored ENABLED_AUTO_SYNC_JOB= " + System.getenv("ENABLED_AUTO_SYNC_JOB"));
     		return SynchronizationResult.ignored();
     	}
