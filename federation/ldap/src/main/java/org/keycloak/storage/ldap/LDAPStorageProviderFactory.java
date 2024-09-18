@@ -474,7 +474,7 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
     		return SynchronizationResult.ignored();
     	}
     	syncMappers(sessionFactory, realmId, model);
-
+    	logger.info("LDAPStorageProviderFactory-477-sync-executed ENABLED_AUTO_SYNC_JOB= " + Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")));
         logger.infof("Sync all users from LDAP to local store: realm: %s, federation provider: %s", realmId, model.getName());
 
         try (LDAPQuery userQuery = createQuery(sessionFactory, realmId, model)) {
@@ -494,7 +494,7 @@ public class LDAPStorageProviderFactory implements UserStorageProviderFactory<LD
     		return SynchronizationResult.ignored();
     	}
     	syncMappers(sessionFactory, realmId, model);
-
+    	logger.info("LDAPStorageProviderFactory-497-syncSince-executed ENABLED_AUTO_SYNC_JOB= " + Boolean.parseBoolean(System.getenv("ENABLED_AUTO_SYNC_JOB")));
         logger.infof("Sync changed users from LDAP to local store: realm: %s, federation provider: %s, last sync time: " + lastSync, realmId, model.getName());
 
         // Sync newly created and updated users
