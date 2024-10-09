@@ -28,6 +28,7 @@ import org.keycloak.common.util.ObjectUtil;
 import org.keycloak.events.admin.OperationType;
 import org.keycloak.events.admin.ResourceType;
 import org.keycloak.models.Constants;
+import org.keycloak.models.CustomSearchKey;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelDuplicateException;
@@ -338,8 +339,15 @@ public class UsersResource {
 
                     attributes.putAll(searchAttributes);
 
-                    return searchForUser(attributes, realm, userPermissionEvaluator, briefRepresentation, firstResult,
-                            maxResults, true);
+					if (attributes.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
+						firstResult = 0;
+						maxResults = 1;
+						return searchForUser(attributes, realm, userPermissionEvaluator, briefRepresentation,
+								firstResult, maxResults, false);
+					} else {
+						return searchForUser(attributes, realm, userPermissionEvaluator, briefRepresentation,
+								firstResult, maxResults, true);
+					}
                 } else {
                     return searchForUser(new HashMap<>(), realm, userPermissionEvaluator, briefRepresentation,
                             firstResult, maxResults, false);

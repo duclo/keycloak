@@ -42,6 +42,7 @@ import org.keycloak.credential.LegacyUserCredentialManager;
 import org.keycloak.federation.kerberos.impl.KerberosUsernamePasswordAuthenticator;
 import org.keycloak.federation.kerberos.impl.SPNEGOAuthenticator;
 import org.keycloak.models.CredentialValidationOutput;
+import org.keycloak.models.CustomSearchKey;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.LDAPConstants;
@@ -53,6 +54,7 @@ import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserManager;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.UserProvider;
 import org.keycloak.models.cache.CachedUserModel;
 import org.keycloak.models.credential.PasswordCredentialModel;
 import org.keycloak.models.utils.ReadOnlyUserModelDelegate;
@@ -361,8 +363,23 @@ public class LDAPStorageProvider implements UserStorageProvider,
                 searchLDAP(realm, search, firstResult, maxResults) :
                 searchLDAPByAttributes(realm, params, firstResult, maxResults);
 
-        return paginatedStream(result.filter(filterLocalUsers(realm)), firstResult, maxResults)
-            .map(ldapObject -> importUserFromLDAP(session, realm, ldapObject));
+        if(params.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
+        	logger.info("*****LDAPStorageProvider-367**********" );
+			final Predicate<LDAPObject> filterLocalUsers = filterLocalUsersByProviderId(realm, params.get(CustomSearchKey.LDAP_PROVIDER_ID));
+			final Stream<LDAPObject> LDAPObjects = result.filter(filterLocalUsers);
+        	logger.info("*****LDAPStorageProvider-370*******=" + result);
+    		final Stream<LDAPObject> paginatedStream = paginatedStream(LDAPObjects, firstResult, maxResults);
+    		logger.info("*****LDAPStorageProvider-372**********");
+    		return paginatedStream.map(ldapObject -> {
+    			logger.info("*****LDAPStorageProvider-374*******="+ ldapObject);
+    			final UserModel importUserFromLDAP = importUserFromLDAP(session, realm, ldapObject);
+    			logger.info("*****LDAPStorageProvider-376*******="+ importUserFromLDAP);
+    			return importUserFromLDAP;
+    		});
+		} else {
+			return paginatedStream(result.filter(filterLocalUsers(realm)), firstResult, maxResults)
+					.map(ldapObject -> importUserFromLDAP(session, realm, ldapObject));
+		}
     }
 
     @Override
@@ -842,6 +859,24 @@ public class LDAPStorageProvider implements UserStorageProvider,
 
     private Predicate<LDAPObject> filterLocalUsers(RealmModel realm) {
         return ldapObject -> UserStoragePrivateUtil.userLocalStorage(session).getUserByUsername(realm, LDAPUtils.getUsername(ldapObject, LDAPStorageProvider.this.ldapIdentityStore.getConfig())) == null;
+    }
+
+    private Predicate<LDAPObject> filterLocalUsersByProviderId(RealmModel realm, String providerId) {
+		return ldapObject -> {
+			final UserProvider userLocalStorage = UserStoragePrivateUtil.userLocalStorage(session);
+			logger.info("****LDAPStorageProvider-867******" + userLocalStorage);
+			final String username = LDAPUtils.getUsername(ldapObject,
+					LDAPStorageProvider.this.ldapIdentityStore.getConfig());
+			logger.info("****LDAPStorageProvider-870******" + username);
+			final UserModel localUser = userLocalStorage.getUserByUsername(realm, username);
+			if (localUser == null || providerId.equals(localUser.getFederationLink())) {
+				logger.info("****LDAPStorageProvider-873******");
+				return true;
+			} else {
+				logger.info("****LDAPStorageProvider-876******");
+				return false;
+			}
+		};
     }
 
     /**

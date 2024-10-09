@@ -24,6 +24,7 @@ import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.UserCredentialStore;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientScopeModel;
+import org.keycloak.models.CustomSearchKey;
 import org.keycloak.models.FederatedIdentityModel;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.IdentityProviderModel;
@@ -88,6 +89,7 @@ public class JpaUserProvider implements UserProvider, UserCredentialStore {
     private static final String USERNAME = "username";
     private static final String FIRST_NAME = "firstName";
     private static final String LAST_NAME = "lastName";
+    private static final String FEDERATION_LINK = "federationLink";
 
     private final KeycloakSession session;
     protected EntityManager em;
@@ -975,6 +977,9 @@ public class JpaUserProvider implements UserProvider, UserCredentialStore {
                     break;
                 case EMAIL_VERIFIED:
                     predicates.add(builder.equal(root.get(key), Boolean.valueOf(value.toLowerCase())));
+                    break;
+                case CustomSearchKey.LDAP_PROVIDER_ID:
+                    predicates.add(builder.equal(root.get(FEDERATION_LINK), value));
                     break;
                 case UserModel.ENABLED:
                     predicates.add(builder.equal(root.get(key), Boolean.valueOf(value)));

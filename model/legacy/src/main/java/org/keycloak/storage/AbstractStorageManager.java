@@ -244,4 +244,37 @@ public abstract class AbstractStorageManager<ProviderType extends Provider,
     public static Stream<ComponentModel> getStorageProviderModels(RealmModel realm, Class<? extends Provider> storageType) {
         return realm.getStorageProviders(storageType);
     }
+
+    /**
+     * Returns stream of storageProvider
+     *
+     * @param realm realm
+     * @param capabilityInterface class of desired capabilityInterface.
+     *                            For example, {@code GroupLookupProvider} or {@code UserQueryProvider}
+     * @param providerId Id of desired provider.                         
+     * @return enabled storage providers for realm and @{code getProviderTypeClass()}
+     */
+    protected <T> Stream<T> getEnabledStorageProvidersByProviderId(RealmModel realm, Class<T> capabilityInterface, String providerId) {
+        return getStorageProviderModelByproviderId(realm, providerId)
+                .map(toStorageProviderModelTypeFunction)
+                .filter(StorageProviderModelType::isEnabled)
+                .sorted(StorageProviderModelType.comparator)
+                .map(storageProviderModelType -> getStorageProviderInstance(storageProviderModelType, capabilityInterface, false))
+                .filter(Objects::nonNull);
+    }
+    
+    /**
+     * Returns an instance of StorageProvider model corresponding realm and providerId
+     * @param realm Realm.
+     * @param providerId Id of desired provider.
+     * @return An instance of type StorageProviderModelType
+     */
+    protected Stream<ComponentModel> getStorageProviderModelByproviderId(RealmModel realm, String providerId) {
+        ComponentModel componentModel = realm.getComponent(providerId);
+        if (componentModel == null) {
+            return Stream.empty();
+        } else {
+        	return Stream.of(componentModel);
+        }
+    }
 }
