@@ -484,14 +484,14 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
     @Override
     public Stream<UserModel> searchForUserStream(RealmModel realm, Map<String, String> attributes, Integer firstResult, Integer maxResults) {
         if(attributes.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
-			Stream<UserModel> results = queryByProviderId((provider, firstResultInQuery, maxResultsInQuery) -> {
-				if (provider instanceof UserQueryMethodsProvider) {
-					return ((UserQueryMethodsProvider)provider).searchForUserStream(realm, attributes,
-							firstResultInQuery, maxResultsInQuery);
-				}
-				return Stream.empty();
-			}, realm, firstResult, maxResults, attributes.get(CustomSearchKey.LDAP_PROVIDER_ID));
-            return importValidation(realm, results);
+        	Stream<UserModel> results = queryByProviderId((provider, firstResultInQuery, maxResultsInQuery) -> {
+        		if (provider instanceof UserQueryMethodsProvider) {
+        			return ((UserQueryMethodsProvider)provider).searchForUserStream(realm, attributes,
+        					firstResultInQuery, maxResultsInQuery);
+        		}
+        		return Stream.empty();
+        	}, realm, firstResult, maxResults, attributes.get(CustomSearchKey.LDAP_PROVIDER_ID));
+        	return importValidation(realm, results);
         } else {
         	Stream<UserModel> results = query((provider, firstResultInQuery, maxResultsInQuery) -> {
                 if (provider instanceof UserQueryMethodsProvider) {
