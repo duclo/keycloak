@@ -365,8 +365,8 @@ public class LDAPStorageProvider implements UserStorageProvider,
 
         if(params.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
         	logger.info("*****LDAPStorageProvider-367**********" );
-			final Predicate<LDAPObject> filterLocalUsers = filterLocalUsersByProviderId(realm, params.get(CustomSearchKey.LDAP_PROVIDER_ID));
-			final Stream<LDAPObject> LDAPObjects = result.filter(filterLocalUsers);
+        	final Predicate<LDAPObject> filterLocalUsers = filterLocalUsersByProviderId(realm, params.get(CustomSearchKey.LDAP_PROVIDER_ID));
+        	final Stream<LDAPObject> LDAPObjects = result.filter(filterLocalUsers);
         	logger.info("*****LDAPStorageProvider-370*******=" + result);
     		final Stream<LDAPObject> paginatedStream = paginatedStream(LDAPObjects, firstResult, maxResults);
     		logger.info("*****LDAPStorageProvider-372**********");

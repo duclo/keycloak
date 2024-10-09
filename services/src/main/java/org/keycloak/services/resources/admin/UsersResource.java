@@ -338,12 +338,12 @@ public class UsersResource {
                     }
 
                     attributes.putAll(searchAttributes);
-
-					if (attributes.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
-						firstResult = 0;
-						maxResults = 1;
-						return searchForUser(attributes, realm, userPermissionEvaluator, briefRepresentation,
-								firstResult, maxResults, false);
+                    
+                    if (attributes.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
+                    	firstResult = 0;
+                    	maxResults = 1;
+                    	return searchForUser(attributes, realm, userPermissionEvaluator, briefRepresentation,
+                    			firstResult, maxResults, false);
 					} else {
 						return searchForUser(attributes, realm, userPermissionEvaluator, briefRepresentation,
 								firstResult, maxResults, true);
