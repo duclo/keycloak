@@ -485,13 +485,10 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
     public Stream<UserModel> searchForUserStream(RealmModel realm, Map<String, String> attributes, Integer firstResult, Integer maxResults) {
         if(attributes.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
         	Stream<UserModel> results = queryByProviderId((provider, firstResultInQuery, maxResultsInQuery) -> {
-        		if (provider instanceof UserQueryMethodsProvider) {
-        			return ((UserQueryMethodsProvider)provider).searchForUserStream(realm, attributes,
-        					firstResultInQuery, maxResultsInQuery);
-        		}
-        		return Stream.empty();
+        		return ((UserQueryMethodsProvider)provider).searchForUserStream(realm, attributes,
+    					firstResultInQuery, maxResultsInQuery);
         	}, realm, firstResult, maxResults, attributes.get(CustomSearchKey.LDAP_PROVIDER_ID));
-        	return importValidation(realm, results);
+        	return results;
         } else {
         	Stream<UserModel> results = query((provider, firstResultInQuery, maxResultsInQuery) -> {
                 if (provider instanceof UserQueryMethodsProvider) {
@@ -812,13 +809,12 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
 		
 		Stream<UserQueryMethodsProvider> storageProviders = getEnabledStorageProvidersByProviderId(realm,
 				UserQueryMethodsProvider.class, providerId);
-		Stream<Object> providersStream = Stream.concat(Stream.of((Object) localStorage()), storageProviders);
 
 		final AtomicInteger currentFirst = new AtomicInteger(firstResult);
 		final AtomicInteger currentMax = new AtomicInteger(maxResults);
 
 		// Query users with currentMax variable counting how many users we return
-		return providersStream
+		return storageProviders
 				.filter(provider -> currentMax.get() != 0) // If we reach currentMax == 0, we can skip querying all following providers
 				.flatMap(provider -> pagedQuery.query(provider, currentFirst.getAndSet(0), currentMax.get()))
 				.peek(userModel -> {
