@@ -364,18 +364,8 @@ public class LDAPStorageProvider implements UserStorageProvider,
                 searchLDAPByAttributes(realm, params, firstResult, maxResults);
 
         if(params.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
-        	logger.info("*****LDAPStorageProvider-367**********" );
-        	final Predicate<LDAPObject> filterLocalUsers = filterLocalUsersByProviderId(realm, params.get(CustomSearchKey.LDAP_PROVIDER_ID));
-        	final Stream<LDAPObject> LDAPObjects = result.filter(filterLocalUsers);
-        	logger.info("*****LDAPStorageProvider-370*******=" + result);
-    		final Stream<LDAPObject> paginatedStream = paginatedStream(LDAPObjects, firstResult, maxResults);
-    		logger.info("*****LDAPStorageProvider-372**********");
-    		return paginatedStream.map(ldapObject -> {
-    			logger.info("*****LDAPStorageProvider-374*******="+ ldapObject);
-    			final UserModel importUserFromLDAP = importUserFromLDAP(session, realm, ldapObject);
-    			logger.info("*****LDAPStorageProvider-376*******="+ importUserFromLDAP);
-    			return importUserFromLDAP;
-    		});
+        	return paginatedStream(result.filter(filterLocalUsersByProviderId(realm, params.get(CustomSearchKey.LDAP_PROVIDER_ID))), firstResult, maxResults)
+					.map(ldapObject -> importUserFromLDAP(session, realm, ldapObject));
 		} else {
 			return paginatedStream(result.filter(filterLocalUsers(realm)), firstResult, maxResults)
 					.map(ldapObject -> importUserFromLDAP(session, realm, ldapObject));
@@ -864,16 +854,16 @@ public class LDAPStorageProvider implements UserStorageProvider,
     private Predicate<LDAPObject> filterLocalUsersByProviderId(RealmModel realm, String providerId) {
 		return ldapObject -> {
 			final UserProvider userLocalStorage = UserStoragePrivateUtil.userLocalStorage(session);
-			logger.info("****LDAPStorageProvider-867******" + userLocalStorage);
+			logger.info("****LDAPStorageProvider-857******" + userLocalStorage);
 			final String username = LDAPUtils.getUsername(ldapObject,
 					LDAPStorageProvider.this.ldapIdentityStore.getConfig());
-			logger.info("****LDAPStorageProvider-870******" + username);
+			logger.info("****LDAPStorageProvider-860******" + username);
 			final UserModel localUser = userLocalStorage.getUserByUsername(realm, username);
 			if (localUser == null || providerId.equals(localUser.getFederationLink())) {
-				logger.info("****LDAPStorageProvider-873******");
+				logger.info("****LDAPStorageProvider-863******");
 				return true;
 			} else {
-				logger.info("****LDAPStorageProvider-876******");
+				logger.info("****LDAPStorageProvider-866******");
 				return false;
 			}
 		};
