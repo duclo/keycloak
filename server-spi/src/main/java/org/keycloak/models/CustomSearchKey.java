@@ -9,4 +9,6 @@ package org.keycloak.models;
 public interface CustomSearchKey {
     
 	String LDAP_PROVIDER_ID = "ldapProviderId";
+	
+	String USERNAME = "username";
 }
