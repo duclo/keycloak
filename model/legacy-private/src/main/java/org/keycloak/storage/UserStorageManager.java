@@ -484,11 +484,20 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
     @Override
     public Stream<UserModel> searchForUserStream(RealmModel realm, Map<String, String> attributes, Integer firstResult, Integer maxResults) {
         if(attributes.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
-        	Stream<UserModel> results = queryByProviderId((provider, firstResultInQuery, maxResultsInQuery) -> {
-        		return ((UserQueryMethodsProvider)provider).searchForUserStream(realm, attributes,
-    					firstResultInQuery, maxResultsInQuery);
-        	}, realm, firstResult, maxResults, attributes.get(CustomSearchKey.LDAP_PROVIDER_ID));
-        	return results;
+        	if(attributes.get(CustomSearchKey.LDAP_PROVIDER_ID) == null || attributes.get(CustomSearchKey.LDAP_PROVIDER_ID).equalsIgnoreCase("null")) {
+        		UserModel userModel = getUserByUsername(realm, attributes.get(CustomSearchKey.USERNAME));
+        		if(userModel != null) {
+        			return Stream.of(userModel);
+        		} else {
+        			return Stream.empty();
+        		}
+			} else {
+				Stream<UserModel> results = queryByProviderId((provider, firstResultInQuery, maxResultsInQuery) -> {
+					return ((UserQueryMethodsProvider)provider).searchForUserStream(realm, attributes,
+							firstResultInQuery, maxResultsInQuery);
+				}, realm, firstResult, maxResults, attributes.get(CustomSearchKey.LDAP_PROVIDER_ID));
+				return results;
+			}
         } else {
         	Stream<UserModel> results = query((provider, firstResultInQuery, maxResultsInQuery) -> {
                 if (provider instanceof UserQueryMethodsProvider) {
