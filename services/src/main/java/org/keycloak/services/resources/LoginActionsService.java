@@ -111,7 +111,9 @@ import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriBuilderException;
 import jakarta.ws.rs.core.UriInfo;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.List;
 
 import static org.keycloak.authentication.actiontoken.DefaultActionToken.ACTION_TOKEN_BASIC_CHECKS;
 import static org.keycloak.models.utils.DefaultRequiredActions.getDefaultRequiredActionCaseInsensitively;
@@ -122,6 +124,7 @@ import static org.keycloak.models.utils.DefaultRequiredActions.getDefaultRequire
 public class LoginActionsService {
 
     private static final Logger logger = Logger.getLogger(LoginActionsService.class);
+    public static final String UPDATE_PASSWORD_EXECUTION = "UPDATE_PASSWORD_EXECUTION";
 
     public static final String AUTHENTICATE_PATH = "authenticate";
     public static final String REGISTRATION_PATH = "registration";
@@ -546,6 +549,7 @@ public class LoginActionsService {
                                        @QueryParam(Constants.CLIENT_ID) String clientId,
                                        @QueryParam(Constants.CLIENT_DATA) String clientData,
                                        @QueryParam(Constants.TAB_ID) String tabId) {
+    	logger.info("********LOGINACTIONSSERVICE--ACTION_TOKEN--552***********");
         return handleActionToken(key, execution, clientId, tabId, clientData, null);
     }
 
@@ -1100,6 +1104,7 @@ public class LoginActionsService {
                                        @QueryParam(Constants.CLIENT_ID) String clientId,
                                        @QueryParam(Constants.CLIENT_DATA) String clientData,
                                        @QueryParam(Constants.TAB_ID) String tabId) {
+    	logger.info("********LOGINACTIONSSERVICE-REQUIREDACTIONPOST-1107***********");
         return processRequireAction(authSessionId, code, action, clientId, tabId, clientData);
     }
 
@@ -1111,6 +1116,7 @@ public class LoginActionsService {
                                       @QueryParam(Constants.CLIENT_ID) String clientId,
                                       @QueryParam(Constants.CLIENT_DATA) String clientData,
                                       @QueryParam(Constants.TAB_ID) String tabId) {
+    	logger.info("********LOGINACTIONSSERVICE-REQUIREDACTIONGET-1119***********");
         return processRequireAction(authSessionId, code, action, clientId, tabId, clientData);
     }
 
@@ -1119,6 +1125,7 @@ public class LoginActionsService {
 
         SessionCodeChecks checks = checksForCode(authSessionId, code, action, clientId, tabId, clientData, REQUIRED_ACTION);
         if (!checks.verifyRequiredAction(action)) {
+        	logger.info("********LOGINACTIONSSERVICE-processRequireAction-1128***********");
             return checks.getResponse();
         }
 
@@ -1127,6 +1134,7 @@ public class LoginActionsService {
         processLocaleParam(authSession);
 
         if (!checks.isActionRequest()) {
+        	logger.info("********LOGINACTIONSSERVICE-processRequireAction-1137***********");
             initLoginEvent(authSession);
             event.event(EventType.CUSTOM_REQUIRED_ACTION);
             return AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection, request, session.getContext().getUri(), event);
@@ -1138,6 +1146,7 @@ public class LoginActionsService {
 
         RequiredActionFactory factory = (RequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, getDefaultRequiredActionCaseInsensitively(action));
         if (factory == null) {
+        	logger.info("********LOGINACTIONSSERVICE-processRequireAction-1149***********");
             ServicesLogger.LOGGER.actionProviderNull();
             event.error(Errors.INVALID_CODE);
             throw new WebApplicationException(ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.INVALID_CODE));
@@ -1150,6 +1159,7 @@ public class LoginActionsService {
         };
         RequiredActionProvider provider = null;
         try {
+        	logger.info("********LOGINACTIONSSERVICE-processRequireAction-1162***********");
             provider = AuthenticationManager.createRequiredAction(context);
         }  catch (AuthenticationFlowException e) {
             if (e.getResponse() != null) {
@@ -1159,9 +1169,10 @@ public class LoginActionsService {
         }
 
 
-        Response response;
+        Response response = null;
 
         if (isCancelAppInitiatedAction(factory.getId(), authSession, context)) {
+        	logger.info("********LOGINACTIONSSERVICE-processRequireAction-1175***********");
             provider.initiatedActionCanceled(session, authSession);
             AuthenticationManager.setKcActionStatus(factory.getId(), RequiredActionContext.KcActionStatus.CANCELLED, authSession);
             context.success();
@@ -1170,10 +1181,12 @@ public class LoginActionsService {
         }
 
         if (action != null) {
+        	logger.info("********LOGINACTIONSSERVICE-processRequireAction-1184***********");
             authSession.setAuthNote(AuthenticationProcessor.LAST_PROCESSED_EXECUTION, action);
         }
 
         if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
+        	logger.info("********LOGINACTIONSSERVICE-processRequireAction-1189***********");
             event.clone().success();
             initLoginEvent(authSession);
             event.event(EventType.LOGIN);
@@ -1182,7 +1195,7 @@ public class LoginActionsService {
             authSession.removeAuthNote(AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION);
             AuthenticationManager.setKcActionStatus(factory.getId(), RequiredActionContext.KcActionStatus.SUCCESS, authSession);
 
-            response = AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection, request, session.getContext().getUri(), event);
+           // response = AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection, request, session.getContext().getUri(), event);
         } else if (context.getStatus() == RequiredActionContext.Status.CHALLENGE) {
             response = context.getChallenge();
         } else if (context.getStatus() == RequiredActionContext.Status.FAILURE) {
@@ -1191,6 +1204,50 @@ public class LoginActionsService {
             throw new RuntimeException("Unreachable");
         }
 
+		if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
+			try {
+				logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1209*****************");
+				List<String> executions = context.getHttpRequest().getUri().getQueryParameters()
+						.get(Constants.EXECUTION);
+				if (!executions.isEmpty() && executions.size() == 1
+						&& executions.get(0).equals(UserModel.RequiredAction.UPDATE_PASSWORD.toString())) {
+					logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1214-Received Request to"
+							+ executions.get(0));
+					logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1216-CLIENT_ID=" + clientId);
+					logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1217-URI_PATH="
+							+ context.getHttpRequest().getUri().getPath());
+					logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1219-BASE_URI_PATH="
+							+ context.getHttpRequest().getUri().getBaseUri().toString());
+
+					if (authSession.getClient() != null) {
+						logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1223-CLIENT_CLIENT_ID = "
+								+ authSession.getClient().getClientId());
+						logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1225-CLIENT_BASE_URL = "
+								+ authSession.getClient().getBaseUrl());
+						logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1227-CLIENT_ROOT_URL = "
+								+ authSession.getClient().getRootUrl());
+
+						if (authSession.getClient().getRootUrl() != null) {
+							URI uriLocation = new URI(authSession.getClient().getRootUrl());
+							authSession.setAuthNote(UPDATE_PASSWORD_EXECUTION, "true");
+							AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection,
+									request, session.getContext().getUri(), event);
+							logger.info("***************LOGINACTIONSSERVICE-processRequireAction-1235*************");
+							return Response.status(302).location(uriLocation).build();
+						}
+					}
+				}
+			} catch (Exception exc) {
+				if (authSession.getAuthNote(UPDATE_PASSWORD_EXECUTION) != null) {
+					authSession.removeAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION);
+				}
+				logger.error("********LOGINACTIONSSERVICE-processRequireAction-FAILED_TO_EXECUTE_CUSTOM_FLOW :" + exc);
+			}
+		}
+		if (context.getStatus() == RequiredActionContext.Status.SUCCESS) {
+			response = AuthenticationManager.nextActionAfterAuthentication(session, authSession, clientConnection,
+					request, session.getContext().getUri(), event);
+		}
         return BrowserHistoryHelper.getInstance().saveResponseAndRedirect(session, authSession, response, true, request);
     }
 

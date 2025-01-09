@@ -981,6 +981,7 @@ public class AuthenticationManager {
                                                   HttpRequest request, UriInfo uriInfo, EventBuilder event,
                                                   Set<String> ignoredActions) {
         Response requiredAction = actionRequired(session, authSession, request, event, ignoredActions);
+        logger.info("****************AuthenticationManager-984-RequiredAction= " + requiredAction);
         if (requiredAction != null) return requiredAction;
         return finishedRequiredActions(session, authSession, null, clientConnection, request, uriInfo, event);
 
@@ -1027,25 +1028,37 @@ public class AuthenticationManager {
             }
         }
 
-        if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null) {
+        logger.info("****************AuthenticationManager-1031-END_AFTER_REQUIRED_ACTIONS= " + authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS));
+        logger.info("********AuthenticationManager-1032-UPDATE_PASSWORD_EXECUTION = " + authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION));
+		if (authSession.getAuthNote(END_AFTER_REQUIRED_ACTIONS) != null
+				|| authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION) != null) {
             LoginFormsProvider infoPage = session.getProvider(LoginFormsProvider.class).setAuthenticationSession(authSession)
                     .setSuccess(Messages.ACCOUNT_UPDATED);
+            logger.info("********AuthenticationManager-1037********");
             if (authSession.getAuthNote(SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS) != null) {
+            	logger.info("********AuthenticationManager-1039-SET_REDIRECT_URI_AFTER_REQUIRED_ACTIONS********");
                 if (authSession.getRedirectUri() != null) {
                     infoPage.setAttribute("pageRedirectUri", authSession.getRedirectUri());
                 }
 
             } else {
+            	logger.info("********AuthenticationManager-1045-SKIP_LINK********");
                 SystemClientUtil.checkSkipLink(session, authSession);
             }
             Response response = infoPage
                     .setDetachedAuthSession()
                     .createInfoPage();
 
+            if (authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION) != null) {
+				authSession.removeAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION);
+			}
+            logger.info("********AuthenticationManager-1055-UPDATE_PASSWORD_EXECUTION = "
+					+ authSession.getAuthNote(LoginActionsService.UPDATE_PASSWORD_EXECUTION));
             new AuthenticationSessionManager(session).removeAuthenticationSession(authSession.getRealm(), authSession, true);
 
             return response;
         }
+		logger.info("********AuthenticationManager-1061********");
         RealmModel realm = authSession.getRealm();
 
         ClientSessionContext clientSessionCtx = AuthenticationProcessor.attachSession(authSession, userSession, session, realm, clientConnection, event);
