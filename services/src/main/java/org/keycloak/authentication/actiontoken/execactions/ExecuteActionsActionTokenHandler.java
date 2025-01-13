@@ -16,6 +16,7 @@
  */
 package org.keycloak.authentication.actiontoken.execactions;
 
+import org.jboss.logging.Logger;
 import org.keycloak.TokenVerifier;
 import org.keycloak.TokenVerifier.Predicate;
 import org.keycloak.authentication.AuthenticationProcessor;
@@ -47,6 +48,8 @@ import static org.keycloak.models.utils.DefaultRequiredActions.getDefaultRequire
  */
 public class ExecuteActionsActionTokenHandler extends AbstractActionTokenHandler<ExecuteActionsActionToken> {
 
+	Logger logger = Logger.getLogger(ExecuteActionsActionTokenHandler.class);
+
     public ExecuteActionsActionTokenHandler() {
         super(
           ExecuteActionsActionToken.TOKEN_TYPE,
@@ -76,11 +79,20 @@ public class ExecuteActionsActionTokenHandler extends AbstractActionTokenHandler
 
     @Override
     public Response handleToken(ExecuteActionsActionToken token, ActionTokenContext<ExecuteActionsActionToken> tokenContext) {
+    	logger.info("****ExecuteActionsActionTokenHandler-HandleToken-82****");
         AuthenticationSessionModel authSession = tokenContext.getAuthenticationSession();
         final UriInfo uriInfo = tokenContext.getUriInfo();
         final RealmModel realm = tokenContext.getRealm();
         final KeycloakSession session = tokenContext.getSession();
-        if (tokenContext.isAuthenticationSessionFresh()) {
+
+		Boolean isUpdatePasswordAction = false;
+		if (token.getRequiredActions() != null && token.getRequiredActions().size() == 1
+				&& token.getRequiredActions().get(0).equals("UPDATE_PASSWORD")) {
+			isUpdatePasswordAction = true;
+			logger.info("*******Execute Update Password Action**********");
+		}
+
+        if (tokenContext.isAuthenticationSessionFresh() && !isUpdatePasswordAction) {
             // Update the authentication session in the token
             String authSessionEncodedId = AuthenticationSessionCompoundId.fromAuthSession(authSession).getEncodedId();
             token.setCompoundAuthenticationSessionId(authSessionEncodedId);

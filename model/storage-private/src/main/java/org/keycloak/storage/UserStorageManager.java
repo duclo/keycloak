@@ -46,6 +46,7 @@ import org.keycloak.models.AbstractKeycloakTransaction;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientScopeModel;
 import org.keycloak.models.CredentialValidationOutput;
+import org.keycloak.models.CustomSearchKey;
 import org.keycloak.models.FederatedIdentityModel;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.IdentityProviderModel;
@@ -113,14 +114,18 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
      * @return
      */
     protected UserModel importValidation(RealmModel realm, UserModel user) {
-
+    	logger.info("******************UserStorageManager-116-importValidation-user="+user);
         if (isReadOnlyOrganizationMember(user)) {
+        	logger.info("******************UserStorageManager-118-importValidation-user="+user);
             return new ReadOnlyUserModelDelegate(user, false);
         }
 
         if (user == null || user.getFederationLink() == null) return user;
 
+        logger.info("******************UserStorageManager-124-importValidation-UserStorageProviderModel="+user);
         UserStorageProviderModel model = getStorageProviderModel(realm, user.getFederationLink());
+        logger.info("******************UserStorageManager-126-importValidation-UserStorageProviderModel="+model);
+
         if (model == null) {
             // remove linked user with unknown storage provider.
             logger.debugf("Removed user with federation link of unknown storage provider '%s'", user.getUsername());
@@ -128,18 +133,24 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
             return null;
         }
 
+        logger.info("******************UserStorageManager-136-importValidation-UserStorageProviderModel="+model.isEnabled());
         if (!model.isEnabled()) {
             return new ReadOnlyUserModelDelegate(user, false);
         }
 
         ImportedUserValidation importedUserValidation = getStorageProviderInstance(model, ImportedUserValidation.class, true);
+        logger.info("******************UserStorageManager-141-importValidation-importedUserValidation="+importedUserValidation);
+
         if (importedUserValidation == null) return user;
 
+        logger.info("******************UserStorageManager-145-BEFORECALLINGVALIDATE");
         UserModel validated = importedUserValidation.validate(realm, user);
         if (validated == null) {
+        	logger.info("******************UserStorageManager-148-AFTERCALLINGVALIDATE"+validated);
             deleteInvalidUser(realm, user);
             return null;
         } else {
+        	logger.info("******************UserStorageManager-152-validated_email="+validated.getEmail());
             return validated;
         }
     }
@@ -387,26 +398,41 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
 
     @Override
     public UserModel getUserByUsername(RealmModel realm, String username) {
+    	logger.info("******************UserStorageManager-400-getUserByUsername-username="+username);
         UserModel user = localStorage().getUserByUsername(realm, username);
+        logger.info("******************UserStorageManager-402-getUserByUsername-user="+user);
         if (user != null) {
             return importValidation(realm, user);
+        } else {
+        	return user;
         }
 
-        return mapEnabledStorageProvidersWithTimeout(realm, UserLookupProvider.class,
-                provider -> provider.getUserByUsername(realm, username)).findFirst().orElse(null);
+        // commented code to stop searching of user in ldap
+		/*
+		 * return mapEnabledStorageProvidersWithTimeout(realm, UserLookupProvider.class,
+		 * provider -> provider.getUserByUsername(realm,
+		 * username)).findFirst().orElse(null);
+		 */
     }
 
     @Override
     public UserModel getUserByEmail(RealmModel realm, String email) {
+    	logger.info("******************UserStorageManager-419-getUserByEmail-email="+email);
         UserModel user = localStorage().getUserByEmail(realm, email);
+        logger.info("******************UserStorageManager-419-getUserByEmail-user="+user);
         if (user != null) {
+        	logger.info("******************UserStorageManager-423-getUserByEmail-user="+user);
             user = importValidation(realm, user);
             // Case when email was changed directly in the userStorage and doesn't correspond anymore to the email from local DB
             if (user != null && email.equalsIgnoreCase(user.getEmail())) {
+            	logger.info("******************UserStorageManager-427-getUserByEmail-user="+user);
                 return user;
             }
+        } else {
+        	return user;
         }
 
+        logger.info("******************UserStorageManager-434-getUserByEmail-user="+user);
         return mapEnabledStorageProvidersWithTimeout(realm, UserLookupProvider.class,
                 provider -> provider.getUserByEmail(realm, email)).findFirst().orElse(null);
     }
@@ -523,22 +549,40 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
     }
 
     @Override
-    public Stream<UserModel> searchForUserStream(RealmModel realm, Map<String, String> attributes, Integer firstResult, Integer maxResults) {
-        Stream<UserModel> results = query((provider, firstResultInQuery, maxResultsInQuery) -> {
-            if (provider instanceof UserQueryMethodsProvider) {
-                return ((UserQueryMethodsProvider)provider).searchForUserStream(realm, attributes, firstResultInQuery, maxResultsInQuery);
-            }
-            return Stream.empty();
-        },
-        (provider, firstResultInQuery, maxResultsInQuery) -> {
-            if (provider instanceof UserCountMethodsProvider) {
-                return ((UserCountMethodsProvider)provider).getUsersCount(realm, attributes);
-            }
-            return 0;
-        }
-        , realm, firstResult, maxResults);
-        return importValidation(realm, results);
-    }
+	public Stream<UserModel> searchForUserStream(RealmModel realm, Map<String, String> attributes, Integer firstResult,
+			Integer maxResults) {
+		if (attributes.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
+			if (attributes.get(CustomSearchKey.LDAP_PROVIDER_ID) == null
+					|| attributes.get(CustomSearchKey.LDAP_PROVIDER_ID).equalsIgnoreCase("null")) {
+				UserModel userModel = getUserByUsername(realm, attributes.get(CustomSearchKey.USERNAME));
+				if (userModel != null) {
+					return Stream.of(userModel);
+				} else {
+					return Stream.empty();
+				}
+			} else {
+				Stream<UserModel> results = queryByProviderId((provider, firstResultInQuery, maxResultsInQuery) -> {
+					return ((UserQueryMethodsProvider) provider).searchForUserStream(realm, attributes,
+							firstResultInQuery, maxResultsInQuery);
+				}, realm, firstResult, maxResults, attributes.get(CustomSearchKey.LDAP_PROVIDER_ID));
+				return results;
+			}
+		} else {
+			Stream<UserModel> results = query((provider, firstResultInQuery, maxResultsInQuery) -> {
+				if (provider instanceof UserQueryMethodsProvider) {
+					return ((UserQueryMethodsProvider) provider).searchForUserStream(realm, attributes,
+							firstResultInQuery, maxResultsInQuery);
+				}
+				return Stream.empty();
+			}, (provider, firstResultInQuery, maxResultsInQuery) -> {
+				if (provider instanceof UserCountMethodsProvider) {
+					return ((UserCountMethodsProvider) provider).getUsersCount(realm, attributes);
+				}
+				return 0;
+			}, realm, firstResult, maxResults);
+			return importValidation(realm, results);
+		}
+	}
 
     @Override
     public Stream<UserModel> searchForUserByUserAttributeStream(RealmModel realm, String attrName, String attrValue) {
@@ -958,4 +1002,22 @@ public class UserStorageManager extends AbstractStorageManager<UserStorageProvid
             }
         });
     }
+
+    protected Stream<UserModel> queryByProviderId(PaginatedQuery pagedQuery, RealmModel realm,
+			Integer firstResult, Integer maxResults, String providerId) {
+
+		Stream<UserQueryMethodsProvider> storageProviders = getEnabledStorageProvidersByProviderId(realm,
+				UserQueryMethodsProvider.class, providerId);
+
+		final AtomicInteger currentFirst = new AtomicInteger(firstResult);
+		final AtomicInteger currentMax = new AtomicInteger(maxResults);
+
+		// Query users with currentMax variable counting how many users we return
+		return storageProviders
+				.filter(provider -> currentMax.get() != 0) // If we reach currentMax == 0, we can skip querying all following providers
+				.flatMap(provider -> pagedQuery.query(provider, currentFirst.getAndSet(0), currentMax.get()))
+				.peek(userModel -> {
+					currentMax.updateAndGet(i -> i > 0 ? i - 1 : i);
+				});
+	}
 }
