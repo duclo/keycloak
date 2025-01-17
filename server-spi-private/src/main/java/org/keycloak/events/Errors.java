@@ -112,5 +112,6 @@ public interface Errors {
     String INVALID_OAUTH2_USER_CODE = "invalid_oauth2_user_code";
     String SLOW_DOWN = "slow_down";
     String GENERIC_AUTHENTICATION_ERROR= "generic_authentication_error";
+    String USER_LOCKED = "user_locked";
 
 }
