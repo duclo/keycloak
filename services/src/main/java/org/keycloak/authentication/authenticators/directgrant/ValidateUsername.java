@@ -84,7 +84,17 @@ public class ValidateUsername extends AbstractDirectGrantAuthenticator {
             AuthenticatorUtils.dummyHash(context);
             context.getEvent().user(user);
             context.getEvent().error(bruteForceError);
-            Response challengeResponse = errorResponse(Response.Status.UNAUTHORIZED.getStatusCode(), "invalid_grant", "Invalid user credentials");
+            Response challengeResponse = null;
+            if (bruteForceError.equals(Errors.USER_DISABLED)) {
+                challengeResponse = errorResponse(Response.Status.UNAUTHORIZED.getStatusCode(), Errors.USER_LOCKED,
+                        "Your account has been locked. Please contact your administrator.");
+            } else if (bruteForceError.equals(Errors.USER_TEMPORARILY_DISABLED)) {
+                challengeResponse = errorResponse(Response.Status.UNAUTHORIZED.getStatusCode(), Errors.USER_LOCKED,
+						"Your account has been temporarily locked. Please contact your administrator.");
+            } else {
+                challengeResponse = errorResponse(Response.Status.UNAUTHORIZED.getStatusCode(), "invalid_grant",
+						"Invalid user credentials");
+            }
             context.forceChallenge(challengeResponse);
             return;
         }
