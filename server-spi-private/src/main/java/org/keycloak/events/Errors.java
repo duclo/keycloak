@@ -125,5 +125,6 @@ public interface Errors {
     String CREDENTIAL_NOT_FOUND = "credential_not_found";
     String MISSING_CREDENTIAL_ID = "missing_credential_id";
     String DELETE_CREDENTIAL_FAILED = "delete_credential_failed";
+    String USER_LOCKED = "user_locked";
 
 }
