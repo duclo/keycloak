@@ -440,6 +440,14 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
             MessageBean wholeMessage = new MessageBean(null, messageType);
             for (FormMessage message : this.messages) {
                 String formattedMessageText = formatMessage(message, messagesBundle, locale);
+				if (message.getMessage().equals("invalidUserMessage") && realm.isBruteForceProtected() && realm.getFailureFactor() > 0) {
+					FormMessage passwordAttemptMessage = new FormMessage(message.getField(), "wrongPasswordAttemptMessage", null);
+					String wrongPasswordMessage = formatMessage(passwordAttemptMessage, messagesBundle, locale);
+					if(!wrongPasswordMessage.equalsIgnoreCase("wrongPasswordAttemptMessage")) {
+						formattedMessageText = formattedMessageText + wrongPasswordMessage;
+					}
+					formattedMessageText = formattedMessageText.replaceAll("\\*", realm.getFailureFactor()+"");
+				}
                 if (formattedMessageText != null) {
                     wholeMessage.appendSummaryLine(formattedMessageText);
                     messagesPerField.addMessage(message.getField(), formattedMessageText, messageType);

@@ -240,7 +240,12 @@ public abstract class AbstractUsernameFormAuthenticator extends AbstractFormAuth
         if (bruteForceError != null) {
             context.getEvent().user(user);
             context.getEvent().error(bruteForceError);
-            Response challengeResponse = challenge(context, disabledByBruteForceError(), disabledByBruteForceFieldError());
+            Response challengeResponse;
+            if(bruteForceError.equalsIgnoreCase(Errors.USER_DISABLED)) {
+                challengeResponse = challenge(context, Messages.ACCOUNT_LOCKED_MESSAGE, disabledByBruteForceFieldError());
+            } else {
+            	challengeResponse = challenge(context, disabledByBruteForceError(), disabledByBruteForceFieldError());
+            }
             context.forceChallenge(challengeResponse);
             return true;
         }
