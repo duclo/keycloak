@@ -63,7 +63,12 @@ public class ResetCredentialEmail implements Authenticator, AuthenticatorFactory
         // we don't want people guessing usernames, so if there was a problem obtaining the user, the user will be null.
         // just reset login for with a success message
         if (user == null) {
-            context.forkWithSuccessMessage(new FormMessage(Messages.EMAIL_SENT));
+            if(authenticationSession.getAuthNote(Errors.USER_LOCKED) != null && authenticationSession.getAuthNote(Errors.USER_LOCKED) != "") {
+            	authenticationSession.removeAuthNote(Errors.USER_LOCKED);
+            	context.forkWithErrorMessage(new FormMessage(Messages.ACCOUNT_LOCKED_MESSAGE));
+        	} else {
+        		context.forkWithSuccessMessage(new FormMessage(Messages.EMAIL_SENT));
+        	}
             return;
         }
 
