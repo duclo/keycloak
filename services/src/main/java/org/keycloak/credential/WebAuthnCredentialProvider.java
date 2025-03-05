@@ -253,9 +253,28 @@ public class WebAuthnCredentialProvider implements CredentialProvider<WebAuthnCr
                 AssertUtil.notNull(collectedClientData, "collectedClientData must not be null");
                 AssertUtil.notNull(serverProperty, "serverProperty must not be null");
                 final Origin clientOrigin = collectedClientData.getOrigin();
+                logger.info("*******collectedClientData-origin***********=" + clientOrigin.toString());
                 if (serverProperty.getOrigins().contains(clientOrigin)) return;
                 // https://github.com/w3c/webauthn/issues/1297
-                if (origins.contains(clientOrigin)) return;
+                if (origins.contains(clientOrigin)) {
+                	return;
+				}
+                
+                boolean isValidNonWebOrigin = false;
+				if (clientOrigin.toString().contains("android:apk-key-hash")) {
+					List<String> extraOrigins = policy.getExtraOrigins();
+					logger.info("********extraOrigins************=" + extraOrigins);
+					if(extraOrigins != null) {
+						for (int i = 0; i < extraOrigins.size(); i++) {
+							if (clientOrigin.toString().contains(extraOrigins.get(i))) {
+								isValidNonWebOrigin = true;
+								break;
+							}
+						}
+					}
+				}
+                
+				if(!isValidNonWebOrigin)
                 throw new BadOriginException("The collectedClientData '" + clientOrigin + "' origin doesn't match any of the preconfigured origins.");
             }
         });
