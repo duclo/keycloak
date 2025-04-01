@@ -32,6 +32,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
+import org.keycloak.authentication.AuthenticationFlowException;
 import org.keycloak.authentication.authenticators.browser.IdentityProviderAuthenticator;
 import org.keycloak.email.freemarker.beans.ProfileBean;
 import org.keycloak.forms.login.LoginFormsProvider;
@@ -53,6 +54,7 @@ import org.keycloak.organization.forms.login.freemarker.model.OrganizationAwareI
 import org.keycloak.organization.forms.login.freemarker.model.OrganizationAwareRealmBean;
 import org.keycloak.organization.protocol.mappers.oidc.OrganizationScope;
 import org.keycloak.organization.utils.Organizations;
+import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
@@ -90,11 +92,27 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
         MultivaluedMap<String, String> parameters = request.getDecodedFormParameters();
         String username = parameters.getFirst(UserModel.USERNAME);
         RealmModel realm = context.getRealm();
-        UserModel user = resolveUser(context, username);
+
+        UserModel user = null;
+        Boolean isUserDisabled = false;
+        try {
+        	user = resolveUser(context, username);
+        } catch (AuthenticationFlowException exc) {
+			if(!exc.getError().equals(AuthenticationFlowError.USER_DISABLED)) {
+				throw exc;
+			}
+			isUserDisabled = true;
+		}
+
         String domain = getEmailDomain(username);
         OrganizationModel organization = resolveOrganization(user, domain);
 
-        if (organization == null) {
+		if (user == null && isUserDisabled.equals(Boolean.FALSE)) {
+			unknownUserChallenge(context, organization, realm, domain != null, user);
+			return;
+		}
+
+		if (organization == null) {
             if (shouldUserSelectOrganization(context, user)) {
                 return;
             }
@@ -110,16 +128,17 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
             return;
         }
 
-        if (user == null) {
-            unknownUserChallenge(context, organization, realm, domain != null);
-            return;
-        }
+		
+		/*
+		 * if (user == null) { unknownUserChallenge(context, organization, realm, domain
+		 * != null); return; }
+		 */
 
         // user exists, check if enabled
-        if (!user.isEnabled()) {
-            context.failure(AuthenticationFlowError.INVALID_USER);
-            return;
-        }
+		/*
+		 * if (!user.isEnabled()) {
+		 * context.failure(AuthenticationFlowError.INVALID_USER); return; }
+		 */
 
         context.attempted();
     }
@@ -291,10 +310,44 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
     }
 
     private boolean hasPublicBrokers(OrganizationModel organization) {
+    	if(organization == null || organization.getIdentityProviders() == null) {
+    		return false;
+    	}
         return organization.getIdentityProviders().anyMatch(Predicate.not(IdentityProviderModel::isHideOnLogin));
     }
 
     private OrganizationProvider getOrganizationProvider() {
         return session.getProvider(OrganizationProvider.class);
+    }
+
+    private void unknownUserChallenge(AuthenticationFlowContext context, OrganizationModel organization,
+			RealmModel realm, boolean domainMatch, UserModel user) {
+        // the user does not exist and is authenticating in the scope of the organization, show the identity-first login page and the
+        // public organization brokers for selection
+        LoginFormsProvider form = context.form()
+                .setAttributeMapper(attributes -> {
+                    if (hasPublicBrokers(organization)) {
+                        attributes.computeIfPresent("social",
+                                (key, bean) -> new OrganizationAwareIdentityProviderBean((IdentityProviderBean) bean, true)
+                        );
+                        // do not show the self-registration link if there are public brokers available from the organization to force the user to register using a broker
+                        attributes.computeIfPresent("realm",
+                                (key, bean) -> new OrganizationAwareRealmBean(realm)
+                        );
+                    } else {
+                        attributes.computeIfPresent("social",
+                                (key, bean) -> new OrganizationAwareIdentityProviderBean((IdentityProviderBean) bean, false, true)
+                        );
+                    }
+
+                    attributes.computeIfPresent("auth",
+                            (key, bean) -> new OrganizationAwareAuthenticationContextBean((AuthenticationContextBean) bean, false)
+                    );
+
+                    return attributes;
+                });
+
+		form.addError(new FormMessage(Messages.ACCOUNT_NOT_EXIST));
+		context.challenge(form.createLoginUsername());
     }
 }

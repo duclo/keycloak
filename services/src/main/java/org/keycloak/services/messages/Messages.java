@@ -327,4 +327,5 @@ public class Messages {
     public static final String REGISTER_ORGANIZATION_MEMBER = "organization.member.register.title";
 
     public static final String ACCOUNT_LOCKED_MESSAGE = "accountLockedMessage";
+    public static final String ACCOUNT_NOT_EXIST = "accountNotExistMessage";
 }
