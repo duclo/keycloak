@@ -72,7 +72,7 @@ public class ValidateOTP extends AbstractDirectGrantAuthenticator implements Cre
                 context.getEvent().user(context.getUser());
             }
             context.getEvent().error(Errors.INVALID_USER_CREDENTIALS);
-            Response challengeResponse = errorResponse(Response.Status.UNAUTHORIZED.getStatusCode(), "invalid_grant", "Invalid user credentials");
+            Response challengeResponse = errorResponse(Response.Status.UNAUTHORIZED.getStatusCode(), "need_otp", "OTP is Required");
             context.failure(AuthenticationFlowError.INVALID_USER, challengeResponse);
             return;
         }

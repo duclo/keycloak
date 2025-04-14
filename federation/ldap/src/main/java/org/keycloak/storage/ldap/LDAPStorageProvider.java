@@ -50,6 +50,7 @@ import org.keycloak.federation.kerberos.KerberosPrincipal;
 import org.keycloak.federation.kerberos.impl.KerberosUsernamePasswordAuthenticator;
 import org.keycloak.federation.kerberos.impl.SPNEGOAuthenticator;
 import org.keycloak.models.CredentialValidationOutput;
+import org.keycloak.models.CustomSearchKey;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.LDAPConstants;
@@ -378,21 +379,35 @@ public class LDAPStorageProvider implements UserStorageProvider,
      * <em>getUserAttributes</em>).
      */
     @Override
-    public Stream<UserModel> searchForUserStream(RealmModel realm, Map<String, String> params, Integer firstResult, Integer maxResults) {
-        String search = params.get(UserModel.SEARCH);
-        Stream<LDAPObject> result = search != null ?
-                searchLDAP(realm, search, firstResult, maxResults) :
-                searchLDAPByAttributes(realm, params, firstResult, maxResults);
+	public Stream<UserModel> searchForUserStream(RealmModel realm, Map<String, String> params, Integer firstResult,
+			Integer maxResults) {
+		String search = params.get(UserModel.SEARCH);
+		Stream<LDAPObject> result = search != null ? searchLDAP(realm, search, firstResult, maxResults)
+				: searchLDAPByAttributes(realm, params, firstResult, maxResults);
 
-        if (model.isImportEnabled()) {
-            result = result.filter(filterLocalUsers(realm));
-        }
-        return StreamsUtil.paginatedStream(
-                // search users but not force import returning null as they were returned before by the DB
-                result.map(ldapObject -> importUserFromLDAP(session, realm, ldapObject, ImportType.NOT_FORCED_RETURN_NULL))
-                        .filter(Objects::nonNull),
-                firstResult, maxResults);
-    }
+		if (params.containsKey(CustomSearchKey.LDAP_PROVIDER_ID)) {
+			if (model.isImportEnabled()) {
+				result = result
+						.filter(filterLocalUsersByProviderId(realm, params.get(CustomSearchKey.LDAP_PROVIDER_ID)));
+			}
+			return StreamsUtil.paginatedStream(
+					// search users but not force import returning null as they were returned before
+					// by the DB
+					result.map(ldapObject -> importUserFromLDAP(session, realm, ldapObject, ImportType.FORCED))
+							.filter(Objects::nonNull),
+					firstResult, maxResults);
+		} else {
+			if (model.isImportEnabled()) {
+				result = result.filter(filterLocalUsers(realm));
+			}
+			return StreamsUtil.paginatedStream(
+					// search users but not force import returning null as they were returned before
+					// by the DB
+					result.map(ldapObject -> importUserFromLDAP(session, realm, ldapObject,
+							ImportType.NOT_FORCED_RETURN_NULL)).filter(Objects::nonNull),
+					firstResult, maxResults);
+		}
+	}
 
     @Override
     public Stream<UserModel> getGroupMembersStream(RealmModel realm, GroupModel group, Integer firstResult, Integer maxResults) {
@@ -563,7 +578,8 @@ public class LDAPStorageProvider implements UserStorageProvider,
                     }
                 } else if (!attrName.equals(UserModel.EXACT)
                         && !attrName.equals(UserModel.INCLUDE_SERVICE_ACCOUNT)
-                        && !(UserModel.ENABLED.equals(attrName) && Boolean.parseBoolean(entry.getValue()))) {
+                        && !(UserModel.ENABLED.equals(attrName) && Boolean.parseBoolean(entry.getValue()))
+                        && !attrName.equals(CustomSearchKey.LDAP_PROVIDER_ID)) {
                     // if the attr is not mapped just return empty stream
                     // skip special names and enabled if looking for true (enabled is not mapped so it's always true)
                     logger.debugf("Searching in LDAP using unmapped attribute [%s], returning empty stream", attrName);
@@ -1199,5 +1215,23 @@ public class LDAPStorageProvider implements UserStorageProvider,
         }
 
         return metadatas;
+    }
+
+    private Predicate<LDAPObject> filterLocalUsersByProviderId(RealmModel realm, String providerId) {
+		return ldapObject -> {
+			final UserProvider userLocalStorage = UserStoragePrivateUtil.userLocalStorage(session);
+			logger.info("****LDAPStorageProvider-867******" + userLocalStorage);
+			final String username = LDAPUtils.getUsername(ldapObject,
+					LDAPStorageProvider.this.ldapIdentityStore.getConfig());
+			logger.info("****LDAPStorageProvider-870******" + username);
+			final UserModel localUser = userLocalStorage.getUserByUsername(realm, username);
+			if (localUser == null || providerId.equals(localUser.getFederationLink())) {
+				logger.info("****LDAPStorageProvider-873******");
+				return true;
+			} else {
+				logger.info("****LDAPStorageProvider-876******");
+				return false;
+			}
+		};
     }
 }

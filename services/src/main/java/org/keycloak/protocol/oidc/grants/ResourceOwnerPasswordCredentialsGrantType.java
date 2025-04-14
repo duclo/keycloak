@@ -123,7 +123,7 @@ public class ResourceOwnerPasswordCredentialsGrantType extends OAuth2GrantTypeBa
             String errorMessage = "Account is not fully set up";
             event.detail(Details.REASON, errorMessage);
             event.error(Errors.RESOLVE_REQUIRED_ACTIONS);
-            throw new CorsErrorResponseException(cors, OAuthErrorException.INVALID_GRANT, errorMessage, Response.Status.BAD_REQUEST);
+            throw new CorsErrorResponseException(cors, OAuthErrorException.NEED_2FA_SETUP, errorMessage, Response.Status.BAD_REQUEST);
 
         }
 
